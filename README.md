@@ -6,6 +6,8 @@ StreamLine is a smart sprinkler system that utilizes LoRa communication technolo
 
 ## Components
 
+NOTE: Blynk account and Dashboard must be set up to use this. Change authentication token in the python code to your unique token from Blynk.
+
 ### 1. ESP32 (SensorValveCode.ino)
 
 The ESP32 microcontroller is responsible for collecting sensor data and controlling the sprinkler valve. The `SensorValveCode.ino` Arduino sketch contains the firmware for the ESP32. This code handles the communication with the Raspberry Pi through LoRa and executes the logic for adjusting the sprinkler system based on the received sensor data and on/off commands from the Blynk app.
