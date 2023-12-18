@@ -6,7 +6,7 @@ StreamLine is a smart sprinkler system that utilizes LoRa communication technolo
 
 ## Components
 
-NOTE: Blynk account and Dashboard must be set up to use this. Change authentication token in the python code to your unique token from Blynk.
+**NOTE: Blynk account and dashboard must be set up to use this. Change authentication token in the python code to your unique token from Blynk.**
 
 ### 1. ESP32 (SensorValveCode.ino)
 
