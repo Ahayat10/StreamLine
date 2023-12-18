@@ -20,21 +20,25 @@ The Raspberry Pi acts as the central hub of the StreamLine system. The `Blynkand
 
 ## Usage
 
-1. **ESP32 Setup:**
+1. **Install Libraries:**
+   - Install LoRa module library from Arduino IDE
+   - Install Blynk library for python on Raspberry Pi.
+
+2. **ESP32 Setup:**
    - Upload the `SensorValveCode.ino` sketch to your ESP32 using the Arduino IDE or any compatible platform.
 
-2. **Raspberry Pi Setup:**
+3. **Raspberry Pi Setup:**
    - Ensure that Python is installed on your Raspberry Pi.
    - Run the `BlynkandCSV.py` script on the Raspberry Pi.
 
-3. **Blynk App Integration:**
+4. **Blynk App Integration:**
    - Install the Blynk app on your mobile device.
    - Configure the app to connect to the Raspberry Pi and monitor the smart sprinkler system.
 
 
 ## Contributors
 
-- [Amna Hayat]
-- [Calyx Ruiz]
-- [Renzheng Zheng]
+- Amna Hayat
+- Calyx Ruiz
+- Renzheng Zheng
 
