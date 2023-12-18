@@ -13,7 +13,7 @@ import board
 # Import RFM9x
 import adafruit_rfm9x
 
-BLYNK_AUTH_TOKEN = 'idjXNLtft_eYxdRF7S_14oL41uXLAvTz'
+BLYNK_AUTH_TOKEN = 'YOURAUTENTICATIONTOKEN'
 
 # Initialize Blynk
 blynk = BlynkLib.Blynk(BLYNK_AUTH_TOKEN)
