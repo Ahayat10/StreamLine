@@ -31,6 +31,7 @@ The Raspberry Pi acts as the central hub of the StreamLine system. The `Blynkand
 
 3. **Raspberry Pi Setup:**
    - Ensure that Python is installed on your Raspberry Pi.
+   - Make sure that your are in the `blynk-library-python` directory
    - Run the `BlynkandCSV.py` script on the Raspberry Pi.
 
 4. **Blynk App Integration:**
