@@ -15,8 +15,8 @@
 
 DHT dht_sensor(DHT_SENSOR_PIN, DHT_SENSOR_TYPE);
 const int sensor_pin = 27; // Soil moisture sensor O/P pin
-const long loraInterval = 2000; 
-unsigned long previousLoraMillis = 0; // will store last time LoRa data was sent
+unsigned long previousMillis = 0; // will store last time data was sent
+const long interval = 3000; // interval at which to send data (milliseconds)
 int flag = 0;
 float moisture_percentage;
 const int sigPin = 32; 
@@ -25,6 +25,8 @@ bool haveHMC5883L = false;
 const int relay_pin = 12; // Define the relay pin 
 
 float humi, tempF;
+
+boolean sigState = 0;
 
 // Variables for flow sensor
 volatile uint16_t pulses = 0;
@@ -40,7 +42,6 @@ void readFlowSensor() {
     lastflowpinstate = x;
   }
 }
-
 
 bool detectHMC5883L() {
     Wire.beginTransmission(HMC5883L_ADDR);
@@ -93,107 +94,103 @@ void setup() {
     } else {
         Serial.println("SPIFFS already mounted");
     }
+
 }
 
 void loop() {
-  String LoRaData;
-  // Soil moisture sensor reading
-  unsigned long currentMillis = millis();
-  humi = dht_sensor.readHumidity();
-  tempF = dht_sensor.readTemperature(true);
-
-  int sensor_analog = analogRead(sensor_pin);
-  moisture_percentage = map(sensor_analog, 1086, 4095, 100, 0);
-
-  // HMC5883L magnetometer reading
-  int16_t x = 0, y = 0, z = 0;
-  if (detectHMC5883L()) {
-    if (!haveHMC5883L) {
-        haveHMC5883L = true;
+    unsigned long currentMillis = millis();
+    String LoRaData;
+    int16_t x = 0, y = 0, z = 0;
+    boolean commandReceived = false;
+    // Read the magnetometer values
+    if (detectHMC5883L()) {
         Wire.beginTransmission(HMC5883L_ADDR);
-        Wire.write(0x02); // Select mode register
-        Wire.write(0x00); // Continuous measurement mode
+        Wire.write(0x03); // Select register 3, X MSB register
         Wire.endTransmission();
+
+        Wire.requestFrom(HMC5883L_ADDR, 6);
+        if (6 <= Wire.available()) {
+            x = (int16_t)(Wire.read() << 8 | Wire.read()); // X msb and lsb
+            z = (int16_t)(Wire.read() << 8 | Wire.read()); // Z msb and lsb
+            y = (int16_t)(Wire.read() << 8 | Wire.read()); // Y msb and lsb
+        }
+    } else if (haveHMC5883L) {
+        haveHMC5883L = false;
+        Serial.println("Lost connection to HMC5883L!");
     }
 
-    Wire.beginTransmission(HMC5883L_ADDR);
-    Wire.write(0x03); // Select register 3, X MSB register
-    Wire.endTransmission();
+    // Soil moisture sensor reading and LoRa communication logic
+    if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis;
+        
+        // Read humidity and temperature
+        humi = dht_sensor.readHumidity();
+        tempF = dht_sensor.readTemperature(true);
 
-    Wire.requestFrom(HMC5883L_ADDR, 6);
-    if (6 <= Wire.available()) {
-        x = (int16_t)(Wire.read() << 8 | Wire.read()); // X msb and lsb
-        z = (int16_t)(Wire.read() << 8 | Wire.read()); // Z msb and lsb
-        y = (int16_t)(Wire.read() << 8 | Wire.read()); // Y msb and lsb
+        // Read soil moisture sensor
+        int sensor_analog = analogRead(sensor_pin);
+        moisture_percentage = map(sensor_analog, 1086, 4095, 100, 0);
+
+        // Flow sensor reading
+        float liters = pulses;
+        liters /= 7.5; // Conversion factor for plastic sensor
+        liters /= 60.0;
+
+        // Construct the message with sensor data
+        String flowString = String(liters, 1) + " Liters";
+        String humiString = String(humi);
+        String tempString = String(tempF);
+        String message = "Humidity: " + humiString + ", Temp: " + tempString + " , Moisture Level: " + String(moisture_percentage, 1) + "%, " +
+                         "x: " + String(x) + " y: " + String(y) + " z: " + String(z) + ", " +
+                         "Flow: " + flowString + ", Valve State: " + (flag == 1 ? "OPEN" : "CLOSED");
+
+        // Send the message
+        Serial.println(message);
+        LoRa.beginPacket();
+        LoRa.print(message);
+        LoRa.endPacket();
+
+        // Reset pulse count
+        pulses = 0;
+        dht_sensor.begin(); 
     }
-  } else if (haveHMC5883L) {
-      haveHMC5883L = false;
-      Serial.println("Lost connection to HMC5883L!");
-  }
 
-  // Flow sensor reading
-  float liters = pulses;
-  liters /= 7.5; // Conversion factor for plastic sensor
-  liters /= 60.0;
+    // Continuously check for incoming messages
+    int packetSize = LoRa.parsePacket();
+    if (packetSize) {
+        // Clear previous data
+        LoRaData = "";
 
-  dht_sensor.begin(); 
+        // Read packet
+        while (LoRa.available()) {
+            char c = LoRa.read();
+            if (c >= 32 && c <= 126) {
+                LoRaData += c;
+            }
+        }
 
-  // Continuously check for incoming messages
-  int packetSize = LoRa.parsePacket();
-  if (packetSize) {
-      // Clear previous data
-      LoRaData = "";
+        // Check for "ON" or "OFF" command in LoRaData
+        if (LoRaData.indexOf("ON") != -1) {
+            flag = 1; // Set flag for relay ON
+            commandReceived = true;
+        } else if (LoRaData.indexOf("OFF") != -1) {
+            flag = 0; // Set flag for relay OFF
+            commandReceived = true;
+        }
+        Serial.print("Received packet: ");
+        Serial.print(LoRaData);
+        Serial.print(" with RSSI ");
+        Serial.println(LoRa.packetRssi());
+    }
 
-      // Read packet
-      while (LoRa.available()) {
-          char c = LoRa.read();
-          if (c >= 32 && c <= 126) {
-              LoRaData += c;
-          }
-      }
+    // Control the relay based on moisture level, x-axis value, or LoRa command
+    if (!commandReceived) { // Only check other conditions if LoRa command did not set the flag
+        if (moisture_percentage <= 60 && (x > -100 && x < 300)) {
+            flag = 1; // Conditions to keep the relay ON
+        } else {
+            flag = 0; // Conditions to turn the relay OFF
+        }
+    }
 
-      // Check for "ON" or "OFF" command in LoRaData
-      if (LoRaData.indexOf("ON") != -1) {
-          flag = 1; // Set flag for relay ON
-      } else if (LoRaData.indexOf("OFF") != -1) {
-          flag = 0; // Set flag for relay OFF
-      }
-
-      Serial.print("Received packet: ");
-      Serial.print(LoRaData);
-      Serial.print(" with RSSI ");
-      Serial.println(LoRa.packetRssi());
-  }
-  // Check if it's time to send LoRa data
-  if (currentMillis - previousLoraMillis >= loraInterval) {
-      previousLoraMillis = currentMillis;
-
-      // Construct and send the LoRa message
-      String flowString = String(liters, 1) + " Liters";
-      String humiString = String(humi);
-      String tempString = String(tempF);
-      String message = "Humidity: " + humiString + ", Temp: " + tempString + " , Moisture Level: " + String(moisture_percentage, 1) + "%, " +
-                      "x: " + String(x) + " y: " + String(y) + " z: " + String(z) + ", " +
-                      "Flow: " + flowString;
-
-      Serial.println(message);
-      LoRa.beginPacket();
-      LoRa.print(message);
-      LoRa.endPacket();
-  }
-
-  // Control the relay based on moisture level or magnetometer reading
-  // Only if no "ON" or "OFF" command was received
-  if (moisture_percentage > 50 || x > 300 || x < -100) {
-      flag = 0; // Conditions to turn the relay OFF
-  } 
-  else if (flag != 1) { // Only turn off the relay if it's not already turned on by LoRa command
-    flag = 0; // If moisture is above 60%, turn the relay OFF
-  }
-  else{
-    flag = 1;
-  }
-
-  digitalWrite(relay_pin, flag == 1 ? HIGH : LOW);
-
+    digitalWrite(relay_pin, flag == 1 ? HIGH : LOW);
 }
