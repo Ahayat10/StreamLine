@@ -23,9 +23,9 @@ The Raspberry Pi acts as the central hub of the StreamLine system. The `Blynkand
 ## Usage
 
 1. **Install Libraries:**
-   `Arduino`
+   - `Arduino`
    - Install LoRa module library from Arduino IDE
-   `Raspberry Pi`
+   - `Raspberry Pi`
    - Install Blynk library for python on Raspberry Pi.
        `git clone https://github.com/vshymanskyy/blynk-library-python.git`
    - Install other necessary libraries
