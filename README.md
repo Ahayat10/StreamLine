@@ -27,10 +27,10 @@ The Raspberry Pi acts as the central hub of the StreamLine system. The `Blynkand
    - Install LoRa module library from Arduino IDE
     ### Raspberry Pi
    - Install Blynk library for python on Raspberry Pi.
-       `git clone https://github.com/vshymanskyy/blynk-library-python.git`
+     - `git clone https://github.com/vshymanskyy/blynk-library-python.git`
    - Install other necessary libraries
-     `pip install adafruit-circuitpython-rfm9x --break-system-packages`
-     `pip install adafruit-blinka --break-system-packages`
+     - `pip install adafruit-circuitpython-rfm9x --break-system-packages`
+     - `pip install adafruit-blinka --break-system-packages`
 
 2. **ESP32 Setup:**
    - Upload the `SensorValveCode.ino` sketch to your ESP32 using the Arduino IDE or any compatible platform.
